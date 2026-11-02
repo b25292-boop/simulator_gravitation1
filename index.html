@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gravitational Force Simulator</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #071426, #102a43, #0b3954);
+    color: white;
+    padding: 25px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+/* HEADER */
+.header {
+    text-align: center;
+    padding: 28px;
+    margin-bottom: 25px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
+
+.header h1 {
+    font-size: 2.4rem;
+    color: #66e3ff;
+    margin-bottom: 12px;
+}
+
+.header p {
+    color: #d8e7f5;
+    font-size: 1.05rem;
+}
+
+.law {
+    margin-top: 18px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #ffd166;
+    padding: 10px;
+}
+
+/* MAIN GRID */
+.main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+/* CARDS */
+.card {
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 25px;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    backdrop-filter: blur(10px);
+}
+
+.card h2 {
+    color: #66e3ff;
+    margin-bottom: 22px;
+    font-size: 1.45rem;
+}
+
+/* EXPERIMENT CONTROLS */
+.control {
+    margin-bottom: 25px;
+}
+
+.control label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.value-box {
+    color: #ffd166;
+    font-weight: bold;
+}
+
+input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+    accent-color: #00d4ff;
+    height: 6px;
+}
+
+/* FORCE DISPLAY */
+.force-display {
+    margin-top: 25px;
+    padding: 22px;
+    border-radius: 16px;
+    text-align: center;
+    background: linear-gradient(135deg, #00b4db, #0083b0);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+
+.force-display h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.force-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+/* BUTTONS */
+.buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+button {
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+}
+
+.add-btn {
+    background: #00e676;
+    color: #052e16;
+}
+
+.reset-btn {
+    background: #ffd166;
+    color: #3b2800;
+}
+
+.clear-btn {
+    background: #ff4d6d;
+    color: white;
+}
+
+/* SIMULATION AREA */
+.simulation-area {
+    height: 350px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.8) 1px, transparent 2px),
+        radial-gradient(circle at 80% 30%, rgba(255,255,255,0.8) 1px, transparent 2px),
+        radial-gradient(circle at 60% 80%, rgba(255,255,255,0.8) 1px, transparent 2px),
+        radial-gradient(circle at 35% 70%, rgba(255,255,255,0.6) 1px, transparent 2px),
+        linear-gradient(135deg, #020617, #0c1a35);
+}
+
+/* ONLY SIMULATOR CONTENT WILL ZOOM */
+.simulation-content {
+    position: absolute;
+    inset: 0;
+    transform: scale(1);
+    transform-origin: center center;
+    transition: transform 0.18s ease;
+}
+
+/* MASSES */
+.mass {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    transition: width 0.3s, height 0.3s, left 0.1s;
+    z-index: 5;
+}
+
+#mass1 {
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+}
+
+#mass2 {
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+}
+
+/* PEOPLE */
+.person {
+    position: absolute;
+    top: 50%;
+    font-size: 2.5rem;
+    transition: left 0.1s;
+    z-index: 10;
+    user-select: none;
+}
+
+/* DISTANCE LINE */
+.distance-line {
+    position: absolute;
+    top: 50%;
+    height: 4px;
+    background: #ffd166;
+    transform: translateY(-50%);
+    transition: width 0.1s, left 0.1s;
+    border-radius: 5px;
+    z-index: 1;
+}
+
+.distance-label {
+    position: absolute;
+    top: 58%;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ffd166;
+    font-weight: bold;
+    z-index: 5;
+}
+
+/* SIMULATOR CONTROL MENU */
+.simulator-tools {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 30;
+
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 7px;
+    background: rgba(2,6,23,0.8);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+}
+
+.simulator-tools button {
+    width: 38px;
+    height: 36px;
+    padding: 0;
+    border-radius: 8px;
+    background: #173b5a;
+    color: white;
+    font-size: 1.15rem;
+}
+
+.simulator-tools button:hover {
+    background: #087ea4;
+    transform: none;
+}
+
+.zoom-indicator {
+    min-width: 45px;
+    text-align: center;
+    color: #ffd166;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+/* FULLSCREEN */
+.simulation-area:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    background-color: #020617;
+}
+
+.simulation-area:fullscreen .simulator-tools {
+    top: 20px;
+    right: 20px;
+}
+
+/* OBSERVATION TABLE */
+.full-card {
+    margin-top: 25px;
+}
+
+.table-container {
+    overflow-x: auto;
+    margin-top: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+}
+
+th {
+    background: #0077b6;
+    color: white;
+    padding: 14px;
+}
+
+td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+tr:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+/* GRAPH */
+canvas {
+    margin-top: 10px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 10px;
+}
+
+/* RESULT */
+.result {
+    margin-top: 25px;
+    padding: 25px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    color: #062b1a;
+}
+
+.result h2 {
+    margin-bottom: 12px;
+}
+
+.result p {
+    font-size: 1.08rem;
+    line-height: 1.7;
+}
+
+/* FORMULA */
+.formula-card {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.formula {
+    margin-top: 15px;
+    padding: 20px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 15px;
+    font-size: 1.5rem;
+    color: #ffd166;
+    font-weight: bold;
+}
+
+/* RESPONSIVE */
+@media(max-width: 800px) {
+    body {
+        padding: 12px;
+    }
+
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header h1 {
+        font-size: 1.7rem;
+    }
+
+    .header p {
+        font-size: 0.9rem;
+    }
+
+    .simulation-area {
+        height: 300px;
+    }
+}
+
+@media(max-width: 420px) {
+    .simulator-tools {
+        top: 8px;
+        right: 8px;
+        gap: 4px;
+        padding: 5px;
+    }
+
+    .simulator-tools button {
+        width: 32px;
+        height: 32px;
+    }
+
+    .zoom-indicator {
+        min-width: 38px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- HEADER -->
+<div class="header">
+    <h1>🌌 Gravitational Force Simulator</h1>
+    <p>Interactive Science Experiment</p>
+    <p>Investigate the relationship between Mass, Distance and Gravitational Force</p>
+    <div class="law">Newton's Law of Universal Gravitation</div>
+</div>
+
+<div class="main-grid">
+
+<!-- EXPERIMENT CONTROLS -->
+<div class="card">
+
+    <h2>🎛 Experiment Controls</h2>
+
+    <div class="control">
+        <label>
+            <span>Mass M₁</span>
+            <span class="value-box" id="m1Value">10 kg</span>
+        </label>
+
+        <input type="range" id="m1"
+        min="1" max="100" value="10"
+        oninput="updateSimulation()">
+    </div>
+
+    <div class="control">
+        <label>
+            <span>Mass M₂</span>
+            <span class="value-box" id="m2Value">10 kg</span>
+        </label>
+
+        <input type="range" id="m2"
+        min="1" max="100" value="10"
+        oninput="updateSimulation()">
+    </div>
+
+    <div class="control">
+        <label>
+            <span>Distance d</span>
+            <span class="value-box" id="dValue">5 m</span>
+        </label>
+
+        <input type="range" id="distance"
+        min="1" max="20" value="5"
+        oninput="updateSimulation()">
+    </div>
+
+    <div class="force-display">
+        <h3>Calculated Gravitational Force</h3>
+        <div class="force-value" id="forceValue">
+            2.670 × 10⁻¹⁰ N
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button class="add-btn" onclick="addObservation()">
+            ➕ Add Observation
+        </button>
+
+        <button class="reset-btn" onclick="resetSimulation()">
+            🔄 Reset
+        </button>
+    </div>
+
+</div>
+
+<!-- LIVE SIMULATION -->
+<div class="card">
+
+    <h2>🔬 Live Simulation</h2>
+
+    <div class="simulation-area" id="simulationArea">
+
+        <!-- SIMULATOR ONLY CONTROL MENU -->
+        <div class="simulator-tools">
+
+            <button type="button"
+            onclick="changeZoom(0.1)"
+            title="Zoom In">＋</button>
+
+            <span class="zoom-indicator" id="zoomIndicator">
+                100%
+            </span>
+
+            <button type="button"
+            onclick="changeZoom(-0.1)"
+            title="Zoom Out">−</button>
+
+            <button type="button"
+            onclick="resetZoom()"
+            title="Reset Zoom">↺</button>
+
+            <button type="button"
+            onclick="toggleFullscreen()"
+            title="Full Screen">⛶</button>
+
+        </div>
+
+        <!-- ZOOMABLE SIMULATOR CONTENT -->
+        <div class="simulation-content" id="simulationContent">
+
+            <div class="person" id="person1">🧍</div>
+
+            <div class="mass" id="mass1">M₁</div>
+
+            <div class="distance-line" id="distanceLine"></div>
+
+            <div class="distance-label" id="distanceLabel">
+                d = 5 m
+            </div>
+
+            <div class="mass" id="mass2">M₂</div>
+
+            <div class="person" id="person2">🧍</div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+
+<!-- FORMULA -->
+<div class="card formula-card">
+
+    <h2>📐 Mathematical Formula</h2>
+
+    <div class="formula">
+        F = G × M₁ × M₂ / d²
+    </div>
+
+    <p style="margin-top:15px;color:#d8e7f5;">
+        G = 6.67430 × 10⁻¹¹ N·m²/kg²
+    </p>
+
+</div>
+
+<!-- OBSERVATION TABLE -->
+<div class="card full-card">
+
+    <h2>📋 Observation Table</h2>
+
+    <div class="table-container">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>S.No.</th>
+                    <th>Mass M₁ (kg)</th>
+                    <th>Mass M₂ (kg)</th>
+                    <th>Distance d (m)</th>
+                    <th>Force F (N)</th>
+                </tr>
+            </thead>
+
+            <tbody id="tableBody"></tbody>
+
+        </table>
+
+    </div>
+
+    <div class="buttons">
+
+        <button class="clear-btn" onclick="clearTable()">
+            🗑 Clear Observation Table
+        </button>
+
+    </div>
+
+</div>
+
+<!-- GRAPH -->
+<div class="card full-card">
+
+    <h2>📈 Graph: Force vs Distance</h2>
+
+    <canvas id="forceChart"></canvas>
+
+</div>
+
+<!-- RESULT -->
+<div class="result">
+
+    <h2>✅ Result</h2>
+
+    <p id="resultText">
+        The gravitational force between two objects increases
+        when either M₁ or M₂ is increased.
+        The force decreases when the distance between the
+        objects increases.
+
+        Therefore, <strong>F ∝ M₁M₂</strong> and
+        <strong>F ∝ 1/d²</strong>.
+
+        Hence, Newton's Law of Universal Gravitation is verified.
+    </p>
+
+</div>
+
+</div>
+
+<script>
+
+/* GRAVITATIONAL CONSTANT */
+const G = 6.67430e-11;
+
+/* GRAPH INITIALIZATION */
+const ctx = document.getElementById("forceChart").getContext("2d");
+
+let forceChart = new Chart(ctx, {
+
+    type: "line",
+
+    data: {
+        labels: [],
+
+        datasets: [{
+            label: "Gravitational Force (N)",
+            data: [],
+            borderWidth: 3,
+            tension: 0.3,
+            fill: true
+        }]
+    },
+
+    options: {
+        responsive: true,
+
+        plugins: {
+            legend: {
+                labels: {
+                    color: "white"
+                }
+            }
+        },
+
+        scales: {
+
+            x: {
+                title: {
+                    display: true,
+                    text: "Distance (m)",
+                    color: "white"
+                },
+
+                ticks: {
+                    color: "white"
+                },
+
+                grid: {
+                    color: "rgba(255,255,255,0.1)"
+                }
+            },
+
+            y: {
+                title: {
+                    display: true,
+                    text: "Force (N)",
+                    color: "white"
+                },
+
+                ticks: {
+                    color: "white"
+                },
+
+                grid: {
+                    color: "rgba(255,255,255,0.1)"
+                }
+            }
+        }
+    }
+
+});
+
+
+/* SIMULATION VARIABLES */
+let prevD = 5;
+let animationTimeout;
+let zoomLevel = 1;
+
+
+/* UPDATE SIMULATION */
+function updateSimulation() {
+
+    let m1 = Number(document.getElementById("m1").value);
+    let m2 = Number(document.getElementById("m2").value);
+    let d = Number(document.getElementById("distance").value);
+
+    document.getElementById("m1Value").innerText = m1 + " kg";
+    document.getElementById("m2Value").innerText = m2 + " kg";
+    document.getElementById("dValue").innerText = d + " m";
+
+    /* CALCULATE FORCE */
+    let force = G * m1 * m2 / (d * d);
+
+    document.getElementById("forceValue").innerText =
+        force.toExponential(3) + " N";
+
+    document.getElementById("distanceLabel").innerText =
+        "d = " + d + " m";
+
+
+    /* CHANGE MASS SIZE */
+    let size1 = 55 + (m1 / 100) * 65;
+    let size2 = 55 + (m2 / 100) * 65;
+
+    let mass1 = document.getElementById("mass1");
+    let mass2 = document.getElementById("mass2");
+
+    mass1.style.width = size1 + "px";
+    mass1.style.height = size1 + "px";
+
+    mass2.style.width = size2 + "px";
+    mass2.style.height = size2 + "px";
+
+
+    /* POSITION MASSES */
+    let offset = 8 + (d / 20) * 32;
+
+    let pos1 = 50 - offset;
+    let pos2 = 50 + offset;
+
+    mass1.style.left = pos1 + "%";
+    mass2.style.left = pos2 + "%";
+
+
+    /* DISTANCE LINE */
+    document.getElementById("distanceLine").style.left =
+        pos1 + "%";
+
+    document.getElementById("distanceLine").style.width =
+        (pos2 - pos1) + "%";
+
+
+    /* PEOPLE POSITION */
+    let p1 = document.getElementById("person1");
+    let p2 = document.getElementById("person2");
+
+    p1.style.left =
+        `calc(${pos1}% - ${size1/2 + 35}px)`;
+
+    p2.style.left =
+        `calc(${pos2}% + ${size2/2 - 5}px)`;
+
+
+    /* PEOPLE ANIMATION */
+    if (d < prevD) {
+
+        p1.innerText = "🏃";
+        p1.style.transform = "translateY(-50%) scaleX(1)";
+
+        p2.innerText = "🏃";
+        p2.style.transform = "translateY(-50%) scaleX(-1)";
+
+    }
+
+    else if (d > prevD) {
+
+        p1.innerText = "🏃";
+        p1.style.transform = "translateY(-50%) scaleX(-1)";
+
+        p2.innerText = "🏃";
+        p2.style.transform = "translateY(-50%) scaleX(1)";
+
+    }
+
+    prevD = d;
+
+    clearTimeout(animationTimeout);
+
+    animationTimeout = setTimeout(() => {
+
+        p1.innerText = "🧍";
+        p1.style.transform = "translateY(-50%) scaleX(1)";
+
+        p2.innerText = "🧍";
+        p2.style.transform = "translateY(-50%) scaleX(1)";
+
+    }, 250);
+
+    return force;
+
+}
+
+
+/* ZOOM IN AND ZOOM OUT */
+function changeZoom(delta) {
+
+    zoomLevel = Math.min(
+        2,
+        Math.max(
+            0.6,
+            Math.round((zoomLevel + delta) * 10) / 10
+        )
+    );
+
+    applyZoom();
+
+}
+
+
+/* RESET ZOOM */
+function resetZoom() {
+
+    zoomLevel = 1;
+
+    applyZoom();
+
+}
+
+
+/* APPLY ZOOM ONLY TO SIMULATOR */
+function applyZoom() {
+
+    document.getElementById("simulationContent").style.transform =
+        `scale(${zoomLevel})`;
+
+    document.getElementById("zoomIndicator").innerText =
+        Math.round(zoomLevel * 100) + "%";
+
+}
+
+
+/* FULL SCREEN SIMULATOR */
+async function toggleFullscreen() {
+
+    let area = document.getElementById("simulationArea");
+
+    try {
+
+        if (!document.fullscreenElement) {
+
+            if (area.requestFullscreen) {
+                await area.requestFullscreen();
+            }
+
+            else if (area.webkitRequestFullscreen) {
+                area.webkitRequestFullscreen();
+            }
+
+        }
+
+        else if (document.exitFullscreen) {
+
+            await document.exitFullscreen();
+
+        }
+
+    }
+
+    catch(error) {
+
+        alert(
+            "Fullscreen is not available in this browser. Please use the zoom buttons."
+        );
+
+    }
+
+}
+
+
+/* ADD OBSERVATION */
+function addObservation() {
+
+    let m1 = Number(document.getElementById("m1").value);
+    let m2 = Number(document.getElementById("m2").value);
+    let d = Number(document.getElementById("distance").value);
+
+    let force = G * m1 * m2 / (d * d);
+
+    let table = document.getElementById("tableBody");
+
+    let row = table.insertRow();
+
+    row.innerHTML = `
+        <td>${table.rows.length}</td>
+        <td>${m1}</td>
+        <td>${m2}</td>
+        <td>${d}</td>
+        <td>${force.toExponential(4)}</td>
+    `;
+
+    /* UPDATE GRAPH */
+    forceChart.data.labels.push(d);
+
+    forceChart.data.datasets[0].data.push(force);
+
+    forceChart.update();
+
+}
+
+
+/* RESET SIMULATION */
+function resetSimulation() {
+
+    document.getElementById("m1").value = 10;
+    document.getElementById("m2").value = 10;
+    document.getElementById("distance").value = 5;
+
+    updateSimulation();
+
+    resetZoom();
+
+}
+
+
+/* CLEAR TABLE AND GRAPH */
+function clearTable() {
+
+    document.getElementById("tableBody").innerHTML = "";
+
+    forceChart.data.labels = [];
+
+    forceChart.data.datasets[0].data = [];
+
+    forceChart.update();
+
+}
+
+
+/* INITIALIZE */
+updateSimulation();
+
+</script>
+
+</body>
+</html>
